@@ -1,6 +1,4 @@
 import java.util.*;
-import javax.lang.model.util.ElementScanner6;
-import jdk.internal.org.jline.utils.InputStreamReader;
 import java.io.*;
 import java.net.*;
 
@@ -25,20 +23,27 @@ class SendingThread implements Runnable
         while(true)
         {
             System.out.print("Enter message: ");
-            String message = inFromUser.readLine();
-            String messagePacket = this.processMessage(message);
-            String targetUsername = message.split(" ")[0].substring(1);
+            try
+            {
+                String message = inFromUser.readLine();
+                String messagePacket = this.processMessage(message);
+                String targetUsername = message.split(" ")[0].substring(1);
 
-            if(messagePacket == null)
-                continue;
-            
-            outToServer.writeBytes(messagePacket);  //Sending the message packet to the server.
-            String messageSentAck = outToServerAcks.readLine();    //Waiting for the server's acknowledegement.
+                if(messagePacket == null)
+                    continue;
+                
+                outToServer.writeBytes(messagePacket);  //Sending the message packet to the server.
+                String messageSentAck = outToServerAcks.readLine();    //Waiting for the server's acknowledegement.
 
-            if(messageSentAck.contains("SENT " + targetUsername))
-                System.out.println("Message sent!\n");
-            else if(messageSentAck.contains("ERROR 102") || sentAck.contains("ERROR 103"))
-                System.out.println("Sending failed. Please enter message again");
+                if(messageSentAck.contains("SENT " + targetUsername))
+                    System.out.println("Message sent!\n");
+                else if(messageSentAck.contains("ERROR 102") || messageSentAck.contains("ERROR 103"))
+                    System.out.println("Sending failed. Please enter message again");
+            }
+            catch(IOException e)
+            {
+                System.out.println(e);
+            }
         }
     }
 
@@ -85,32 +90,39 @@ class RecievingThread implements Runnable
     {
         while(true)
         {
-            //Reading the FORWARD line
-            String message = inFromServer.readLine();            
-            if(message.length() <= 8 || !message.substring(0,8).equals("FORWARD "))
+            try
             {
-                inFromServerAcks.writeBytes("ERROR 103 Header incomplete\n");
-                continue;
-            }
-            String senderUsername = message.split("\n")[0].split(" ")[1];
+                //Reading the FORWARD line
+                String message = inFromServer.readLine();            
+                if(message.length() <= 8 || !message.substring(0,8).equals("FORWARD "))
+                {
+                    inFromServerAcks.writeBytes("ERROR 103 Header incomplete\n");
+                    continue;
+                }
+                String senderUsername = message.split("\n")[0].split(" ")[1];
 
-            //Reading the content-length line
-            message = inFromServer.readLine();
-            if(message.length() <= 16 || !message.substring(0,16).equals("Content-length: "))
+                //Reading the content-length line
+                message = inFromServer.readLine();
+                if(message.length() <= 16 || !message.substring(0,16).equals("Content-length: "))
+                {
+                    inFromServerAcks.writeBytes("ERROR 103 Header incomplete\n\n");
+                    continue;
+                }
+                int contentLength = Integer.parseInt(message.split("\n")[0].split(" ")[1]);
+
+                message = inFromServer.readLine();
+                char content[] = new char[contentLength + 2];
+                int flag = inFromServer.read(content, 0, contentLength);
+                String contentString = new String(content);
+
+                System.out.println("New message from " + senderUsername + " : " + contentString);
+
+                inFromServerAcks.writeBytes("RECIEVED " + senderUsername + "\n\n");
+            }
+            catch(IOException e)
             {
-                inFromServerAcks.writeBytes("ERROR 103 Header incomplete\n\n");
-                continue;
+                System.out.println(e);
             }
-            int contentLength = Integer.parseInt(message.split("\n")[0].split(" ")[1]);
-
-            message = inFromServer.readLine();
-            char content[] = new char[contentLength + 2];
-            message = inFromServer.read(content, 0, contentLength);
-            String contentString = new String(content);
-
-            System.out.println("New message from " + senderUsername + " : " + contentString);
-
-            inFromServerAcks.writeBytes("RECIEVED " + sendersenderUsername + "\n\n");
         }
     }
 }
@@ -124,7 +136,6 @@ public class Client
 
         String username = args[0];
         String serverHost = args[1];
-        Client myClient = new Client();
 
         Socket sendingSocket = new Socket(serverHost, 1234);             //TODO
         Socket recievingSocket = new Socket(serverHost, 1234);            //TODO
@@ -132,7 +143,8 @@ public class Client
         DataOutputStream outToServer = new DataOutputStream(sendingSocket.getOutputStream());   //TCP connection for sending messages
         BufferedReader outToServerAcks = new BufferedReader(new InputStreamReader(sendingSocket.getInputStream()));
 
-        BufferedReader inFromServer = new BufferedReader(new InputStreamReader(recievingSocket.getInputStream()));  //TCP connection for recieving messages
+        // BufferedReader inFromServer = new BufferedReader(new InputStreamReader(recievingSocket.getInputStream()));  //TCP connection for recieving messages
+        BufferedReader inFromServer = new BufferedReader(new InputStreamReader(System.in));
         DataOutputStream inFromServerAcks = new DataOutputStream(recievingSocket.getOutputStream());
 
         //Registering the username
@@ -149,11 +161,15 @@ public class Client
         else if(ack.contains("ERROR 100 Malformed username"))
         {
             System.out.println("The username: " + username + " is invalid. Please try again");
+            sendingSocket.close();
+            recievingSocket.close();
             return;
         }
         else
         {
             System.out.println("An unknown error occured. We will miss you. Please try again.");
+            sendingSocket.close();
+            recievingSocket.close();
             return;
         }
 
@@ -167,11 +183,15 @@ public class Client
         else if(ack.contains("ERROR 100 Malformed username"))
         {
             System.out.println("The username: " + username + " is invalid. Please register again. (Only alphanumerals. Avoid spaces and spl chars)");
+            sendingSocket.close();
+            recievingSocket.close();
             return;
         }
         else
         {
             System.out.println("An unknown error occured. We will miss you. Please register again.");
+            sendingSocket.close();
+            recievingSocket.close();
             return;
         }
 
