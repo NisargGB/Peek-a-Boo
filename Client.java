@@ -2,7 +2,6 @@ import java.util.*;
 import java.io.*;
 import java.net.*;
 
-
 class SendingThread implements Runnable
 {
     Socket sendingSocket;
