@@ -38,12 +38,11 @@ class ClientThread implements Runnable
         try
         {
             boolean registeredClient = false;
+            boolean disconnected = false;
             
-
             while(!registeredClient)
             {
                 String message = inFromClient.readLine();
-                // System.out.println("Readline called for register command: " + message);
                 String[] messageSplit = message.split(" ");
 
                 if(messageSplit[0].equals("REGISTER") && messageSplit[1].equals("TOSEND") && messageSplit.length==3)
@@ -61,29 +60,27 @@ class ClientThread implements Runnable
 
                         while(true)                             //Accepting messages
                         {
-                            String newMessage = inFromClient.readLine();
-                            // System.out.println("First readline awaiting the SEND message: " + newMessage);
+                            String newMessage = "";
+                            try
+                            {
+                                newMessage = inFromClient.readLine();
+                            }
+                            catch(SocketException se)
+                            {
+                                System.out.println("The client " + username + " was disconnected");
+                                break;
+                            }
                             String targetUser = newMessage.split(" ")[1].split("\n")[0];
                             newMessage = inFromClient.readLine();
-                            // System.out.println("Readline accepting the content length message: " + newMessage);
                             inFromClient.readLine();                    //Ignoring the extra \n
                             
                             int contentLength = Integer.parseInt(newMessage.split(" ")[1]);
                             // char[] content = new char[contentLength];
                             // int flag = inFromClient.read(content, 0, contentLength);
                             // String contentString = new String(content);
-                            // System.out.println("here1");
                             String contentString = inFromClient.readLine();
-                            // System.out.println("here2");
-                            // inFromClient.readLine();                        //Ignoring the \n after the content line
-                            // System.out.print("The content char array read: ");
-                            // for(char c : contentString)
-                            //     System.out.print(c + " ");
-                            // System.out.println("flag: " + flag);
                             String packetToBeSent =  "FORWARD " + username + "\n" + newMessage + "\n\n" + contentString + "\n";
-                            // System.out.println("The packet server prepares from the message it recieves: " + packetToBeSent);
-                            // System.out.println(contentString);
-
+                            
                             Socket targetSocket = recieverSocketsMap.get(targetUser);
                             if(targetSocket==null)
                             {
@@ -100,6 +97,8 @@ class ClientThread implements Runnable
                     else
                     {
                         this.sendUsernameError();
+                        System.out.println("here");
+                        disconnected = true;
                     }
                 }
                 else if(messageSplit[0].equals("REGISTER") && messageSplit[1].equals("TORECV") && messageSplit.length==3)
@@ -120,6 +119,7 @@ class ClientThread implements Runnable
                 else
                 {
                     this.sendUsernameError();
+                    break;
                 }
             }
         }
