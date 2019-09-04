@@ -15,6 +15,7 @@ class SendingThread implements Runnable
         sendingSocket = sendingSocketIn;
         outToServer = outToServerIn;
         outToServerAcks = outToServerAcksIn;
+        try {outToServerAcks.readLine();} catch(IOException e){e.printStackTrace();}
         inFromUser = new BufferedReader(new InputStreamReader(System.in));       //Reader that reads the messages types by the user.
     }
 
@@ -26,7 +27,9 @@ class SendingThread implements Runnable
             try
             {
                 String message = inFromUser.readLine();
+                // System.out.println("Readline called: " + message);
                 String messagePacket = this.processMessage(message);
+                // System.out.print("Perpared packet by the client: " + messagePacket);
                 String targetUsername = message.split(" ")[0].substring(1);
 
                 if(messagePacket == null)
@@ -34,11 +37,17 @@ class SendingThread implements Runnable
                 
                 outToServer.writeBytes(messagePacket);  //Sending the message packet to the server.
                 String messageSentAck = outToServerAcks.readLine();    //Waiting for the server's acknowledegement.
+                // System.out.println("Acknowledgement recieved by client: " + messageSentAck);
 
                 if(messageSentAck.contains("SENT " + targetUsername))
-                    System.out.println("Message sent!\n");
-                else if(messageSentAck.contains("ERROR 102") || messageSentAck.contains("ERROR 103"))
+                    System.out.println("Message sent!");
+                else if(messageSentAck.contains("ERROR 101"))
+                    System.out.println("The user is not registered for sending messages");
+                else //if(messageSentAck.contains("ERROR 102") || messageSentAck.contains("ERROR 103"))
                     System.out.println("Sending failed. Please enter message again");
+                
+                outToServerAcks.readLine();         //Ignoring the extra \n after the ack message
+                
             }
             catch(IOException e)
             {
@@ -65,9 +74,9 @@ class SendingThread implements Runnable
      public String constructMessage(String targetUser, String content)
      {
          String message = new String();
-         message = message + "SEND " + targetUser + "\n";
+         message = "SEND " + targetUser + "\n";
          message = message + "Content-length: " + content.length() + "\n"; //TODO : bytes length or number of chatacters ?
-         message = message + "\n" + content;
+         message = message + "\n" + content + "\n";
          return message;
      }
 }
@@ -83,17 +92,24 @@ class RecievingThread implements Runnable
     {
         recievingSocket = recievingSocketIn;
         inFromServer = inFromServerIn;
+        // try{inFromServer.readLine();
+        //     System.out.println("First readline called by recievingthread");
+        // } catch(IOException e) {e.printStackTrace();}
         inFromServerAcks = inFromServerAcksIn;
     }
 
     public void run()
     {
-        while(true)
+        try
         {
-            try
+            inFromServer.readLine();
+            while(true)
             {
                 //Reading the FORWARD line
-                String message = inFromServer.readLine();            
+                String message = inFromServer.readLine();
+                // System.out.println("Client calls readline to read first line of incoming message: " + message);
+                // message = inFromServer.readLine();
+                // System.out.println("Client calls readline to expect the FORWARD message: " + message);
                 if(message.length() <= 8 || !message.substring(0,8).equals("FORWARD "))
                 {
                     inFromServerAcks.writeBytes("ERROR 103 Header incomplete\n");
@@ -103,6 +119,7 @@ class RecievingThread implements Runnable
 
                 //Reading the content-length line
                 message = inFromServer.readLine();
+                // System.out.println("Readline called for content length line: " + message);
                 if(message.length() <= 16 || !message.substring(0,16).equals("Content-length: "))
                 {
                     inFromServerAcks.writeBytes("ERROR 103 Header incomplete\n\n");
@@ -111,18 +128,22 @@ class RecievingThread implements Runnable
                 int contentLength = Integer.parseInt(message.split("\n")[0].split(" ")[1]);
 
                 message = inFromServer.readLine();
-                char content[] = new char[contentLength + 2];
-                int flag = inFromServer.read(content, 0, contentLength);
-                String contentString = new String(content);
+                // System.out.println("Readline called to flush the extra newline: " + message);
+                // char content[] = new char[contentLength];
+                // int flag = inFromServer.read(content, 0, contentLength);
+                // String contentString = new String(content);
+                String contentString = inFromServer.readLine();
+                // inFromServer.readLine();                        //Ignoring the \n after the content line
+                // System.out.println("Content string read by as chars[]: " + contentString);
 
                 System.out.println("New message from " + senderUsername + " : " + contentString);
 
-                inFromServerAcks.writeBytes("RECIEVED " + senderUsername + "\n\n");
+                inFromServerAcks.writeBytes("RECIEVED " + senderUsername + "\n\n");       
             }
-            catch(IOException e)
-            {
-                System.out.println(e);
-            }
+        }
+        catch(IOException e)
+        {
+            System.out.println(e);
         }
     }
 }
@@ -143,8 +164,8 @@ public class Client
         DataOutputStream outToServer = new DataOutputStream(sendingSocket.getOutputStream());   //TCP connection for sending messages
         BufferedReader outToServerAcks = new BufferedReader(new InputStreamReader(sendingSocket.getInputStream()));
 
-        // BufferedReader inFromServer = new BufferedReader(new InputStreamReader(recievingSocket.getInputStream()));  //TCP connection for recieving messages
-        BufferedReader inFromServer = new BufferedReader(new InputStreamReader(System.in));
+        BufferedReader inFromServer = new BufferedReader(new InputStreamReader(recievingSocket.getInputStream()));  //TCP connection for recieving messages
+        // BufferedReader inFromServer = new BufferedReader(new InputStreamReader(System.in));                      //For testing purposes
         DataOutputStream inFromServerAcks = new DataOutputStream(recievingSocket.getOutputStream());
 
         //Registering the username
@@ -156,6 +177,8 @@ public class Client
         String ack = outToServerAcks.readLine();
         if(ack.contains("REGISTERED TOSEND " + username))
         {
+            // System.out.println("Ack recieved by client after registration: " + ack);
+            // inFromServer.readLine();            //Ignoring the extra \n character
             registeredAsSender = true;
         }
         else if(ack.contains("ERROR 100 Malformed username"))
@@ -178,6 +201,8 @@ public class Client
         ack = inFromServer.readLine();
         if(ack.contains("REGISTERED TORECV " + username))
         {
+            // System.out.println("Ack recieved by client after registration: " + ack);
+            // inFromServer.readLine();            //Ignoring the extra \n character
             registeredAsReciever = true;
         }
         else if(ack.contains("ERROR 100 Malformed username"))
