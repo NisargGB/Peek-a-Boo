@@ -62,6 +62,19 @@ class ClientThread implements Runnable
 
                         while(true)                             //Accepting messages
                         {
+                            if(disconnected == true)
+                            {
+                                System.out.println("The client " + username + " was disconnected");
+                                System.out.println("earlier senderSocketsMap was: " + senderSocketsMap);
+                                System.out.println("earlier recieverSocketsMap was: " + recieverSocketsMap);
+                                senderSocketsMap.remove(username);
+                                recieverSocketsMap.remove(username);
+                                publicKeysMap.remove(username);
+                                System.out.println("updated senderSocketsMap is: " + senderSocketsMap);
+                                System.out.println("updated senderSocketsMap is: " + recieverSocketsMap);
+                                break;
+                            }
+
                             String newMessage = "";
                             try
                             {
@@ -80,11 +93,13 @@ class ClientThread implements Runnable
                                 break;
                             }
 
+
                             String targetUser = newMessage.split(" ")[1].split("\n")[0];//FETCHKEY + targetuser
 
                             if((newMessage.split(" ")[0]).equals("CLOSECONNECTION"))
                             {
                                 inFromClient.readLine(); //ignoring extra \n
+                                disconnected = true;
                                 continue;
                             }
                             if((newMessage.split(" ")[0]).equals("FETCHKEY"))   //this is encrypted mode of conversation

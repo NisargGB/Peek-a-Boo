@@ -71,9 +71,17 @@ class SendingThread implements Runnable
                 }
                 
                 byte[] publicKeyTargetUser = {};
-                if(modeOfOperation == 2)
+                String targetUser = messageSplit[0].substring(1);
+                if(targetUser.equals("Server") && messageSplit[1].equals("Bye"))
                 {
-                    String targetUser = messageSplit[0].substring(1);
+                    System.out.println("Client disconnected! We will miss you...");
+                    isConnected = false;
+                    outToServer.writeBytes("CLOSECONNECTION " + username + "\n\n");
+                    break;
+                }
+
+                if(modeOfOperation == 2)
+                {    
                     String publicKeyTargetUserBase64;
                     outToServer.writeBytes("FETCHKEY " + targetUser + "\n\n");
                     String ack = outToServerAcks.readLine();
