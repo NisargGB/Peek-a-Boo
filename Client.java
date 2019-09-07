@@ -1,6 +1,19 @@
 import java.util.*;
 import java.io.*;
 import java.net.*;
+import java.security.KeyFactory;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.PrivateKey;
+import java.security.PublicKey;
+import java.security.SecureRandom;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.security.spec.X509EncodedKeySpec;
+import java.security.MessageDigest;
+
+import javax.crypto.Cipher;
 
 class SendingThread implements Runnable
 {
@@ -9,8 +22,9 @@ class SendingThread implements Runnable
     BufferedReader outToServerAcks;
     BufferedReader inFromUser;
     Boolean isConnected;
+    String username;
 
-    public SendingThread(Socket sendingSocketIn, DataOutputStream outToServerIn, BufferedReader outToServerAcksIn, Boolean isConnectedIn)
+    public SendingThread(Socket sendingSocketIn, DataOutputStream outToServerIn, BufferedReader outToServerAcksIn, Boolean isConnectedIn, String usernameIn)
     {
         sendingSocket = sendingSocketIn;
         outToServer = outToServerIn;
@@ -18,6 +32,7 @@ class SendingThread implements Runnable
         try {outToServerAcks.readLine();} catch(IOException e){e.printStackTrace();}
         inFromUser = new BufferedReader(new InputStreamReader(System.in));       //Reader that reads the messages types by the user.
         isConnected = isConnectedIn;
+        username = usernameIn;
     }
 
     public void run()
@@ -34,11 +49,52 @@ class SendingThread implements Runnable
                 }
                 catch(Exception e)
                 {
+                    System.out.println(message);
                     System.out.println("Client disconnected! We will miss you...");
                     isConnected = false;
                     break;
                 }
-                String messagePacket = this.processMessage(message);
+
+                String[] messageSplit = {};
+                try
+                {
+                    messageSplit = message.split(" ");
+                }
+                catch(Exception e)
+                {
+                    System.out.println("Client disconnected! We will miss you...");
+                    isConnected = false;
+                    outToServer.writeBytes("CLOSECONNECTION " + username + "\n\n");
+                    break;
+                }
+                
+                String targetUser = messageSplit[0].substring(1);
+                String publicKeyTargetUserBase64;
+                byte[] publicKeyTargetUser;
+                outToServer.writeBytes("FETCHKEY " + targetUser + "\n\n");
+                String ack = outToServerAcks.readLine();
+                outToServerAcks.readLine();
+                String[] ackSplit = ack.split(" ");
+                while(!(ackSplit[0].equals("PUBLICKEY") && ackSplit[1].equals("SENT")))
+                {
+                    outToServer.writeBytes("FETCHKEY " + targetUser + "\n\n");
+                    ack = outToServerAcks.readLine();
+                    ackSplit = ack.split(" "); //check this forever loop
+                }
+                publicKeyTargetUserBase64 = ackSplit[2];
+                publicKeyTargetUser =  java.util.Base64.getDecoder().decode(publicKeyTargetUserBase64);
+        
+                String messagePacket = "";
+                try
+                {
+                    messagePacket = this.processMessage(message, publicKeyTargetUser);
+                }
+                catch(Exception e)
+                {
+                    // e.printStackTrace();
+                    System.out.println("Message couldn't be encrypted");
+                    continue;
+                }
                 String targetUsername = message.split(" ")[0].substring(1);
 
                 if(messagePacket == null)
@@ -65,7 +121,7 @@ class SendingThread implements Runnable
     }
 
      //Checks if the message entered by the user is well formed: Returns the message packet if well-formed
-     public String processMessage(String message)
+     public String processMessage(String message, byte[] publicKeyTargetUser) throws Exception
      {
          String[] messageSplit = message.split(" ");
          if(message.charAt(0) != '@' || messageSplit.length <= 1)
@@ -74,17 +130,21 @@ class SendingThread implements Runnable
              return null;
          }
          
-         return this.constructMessage(messageSplit[0].substring(1), message.substring(0 + messageSplit[0].length() + 1));
+         return this.constructMessage(messageSplit[0].substring(1), message.substring(0 + messageSplit[0].length() + 1), publicKeyTargetUser);
      }
  
  
      //Generates a well-formatted string from the message and taregt user to be sent to the server
-     public String constructMessage(String targetUser, String content)
+     public String constructMessage(String targetUser, String content, byte[] publicKeyTargetUser) throws Exception
      {
          String message = new String();
          message = "SEND " + targetUser + "\n";
          message = message + "Content-length: " + content.length() + "\n"; //TODO : bytes length or number of chatacters ?
-         message = message + "\n" + content + "\n";
+         Encryptor crypto = new Encryptor();
+         byte[] contentBytes = content.getBytes();
+         byte[] encryptedData = crypto.encrypt(publicKeyTargetUser, contentBytes); //encrypt function
+         String encryptedStringBase64 = java.util.Base64.getEncoder().encodeToString(encryptedData);
+         message = message + "\n" + encryptedStringBase64 + "\n";
          return message;
      }
 }
@@ -96,13 +156,15 @@ class RecievingThread implements Runnable
     BufferedReader inFromServer;
     DataOutputStream inFromServerAcks;
     Boolean isConnected;
+    byte[] privateKey;
 
-    public RecievingThread(Socket recievingSocketIn, BufferedReader inFromServerIn, DataOutputStream inFromServerAcksIn, Boolean isConnectedIn)
+    public RecievingThread(Socket recievingSocketIn, BufferedReader inFromServerIn, DataOutputStream inFromServerAcksIn, Boolean isConnectedIn, byte[] privateKeyIn)
     {
         recievingSocket = recievingSocketIn;
         inFromServer = inFromServerIn;
         inFromServerAcks = inFromServerAcksIn;
         isConnected = isConnectedIn;
+        privateKey = privateKeyIn;
     }
 
     public void run()
@@ -136,8 +198,21 @@ class RecievingThread implements Runnable
                 // int flag = inFromServer.read(content, 0, contentLength);
                 // String contentString = new String(content);
                 String contentString = inFromServer.readLine();
-                
-                System.out.println("\nNew message from " + senderUsername + " : " + contentString);
+                byte[] encryptedDataBase64 = java.util.Base64.getDecoder().decode(contentString);
+                Encryptor crypto = new Encryptor();
+                byte[] decryptedData;
+                try
+                {
+                    decryptedData = crypto.decrypt(privateKey, encryptedDataBase64);
+                }
+                catch(Exception e)
+                {
+                    // e.printStackTrace();
+                    System.out.println("New message from " + senderUsername + " couldn't be decrypted.");
+                    continue;
+                }
+                String finalContent = new String(decryptedData);
+                System.out.println("\nNew message from " + senderUsername + " : " + finalContent);
 
                 inFromServerAcks.writeBytes("RECIEVED " + senderUsername + "\n\n");       
             }
@@ -153,7 +228,7 @@ class RecievingThread implements Runnable
 public class Client
 {
     static Boolean isConnected = true;
-
+    
     public static void main(String args[]) throws Exception
     {
         //Command line inputs: <username> <server IP address>
@@ -163,6 +238,12 @@ public class Client
 
         Socket sendingSocket = new Socket(serverHost, 1234);             //TODO
         Socket recievingSocket = new Socket(serverHost, 1234);            //TODO
+
+        Encryptor crypto = new Encryptor();
+        KeyPair generateKeyPair = crypto.generateKeyPair();
+        byte[] publicKey = generateKeyPair.getPublic().getEncoded();
+        byte[] privateKey = generateKeyPair.getPrivate().getEncoded();
+        String publicKeyBase64 = java.util.Base64.getEncoder().encodeToString(publicKey);
 
         DataOutputStream outToServer = new DataOutputStream(sendingSocket.getOutputStream());   //TCP connection for sending messages
         BufferedReader outToServerAcks = new BufferedReader(new InputStreamReader(sendingSocket.getInputStream()));
@@ -197,7 +278,7 @@ public class Client
         }
 
         //Registering as reciever
-        inFromServerAcks.writeBytes("REGISTER TORECV " + username + "\n\n");
+        inFromServerAcks.writeBytes("REGISTER TORECV " + username + " PUBLICKEY " + publicKeyBase64 + "\n\n");
         ack = inFromServer.readLine();
         if(ack.contains("REGISTERED TORECV " + username))
         {
@@ -225,8 +306,8 @@ public class Client
         //Registration complete
 
 
-        Thread sender = new Thread(new SendingThread(sendingSocket, outToServer, outToServerAcks, isConnected));
-        Thread reciever = new Thread(new RecievingThread(recievingSocket, inFromServer, inFromServerAcks, isConnected));
+        Thread sender = new Thread(new SendingThread(sendingSocket, outToServer, outToServerAcks, isConnected, username));
+        Thread reciever = new Thread(new RecievingThread(recievingSocket, inFromServer, inFromServerAcks, isConnected, privateKey));
         sender.start();
         reciever.start();
     }
