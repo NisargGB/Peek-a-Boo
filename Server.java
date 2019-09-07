@@ -74,6 +74,7 @@ class ClientThread implements Runnable
                                 System.out.println("earlier recieverSocketsMap was: " + recieverSocketsMap);
                                 senderSocketsMap.remove(username);
                                 recieverSocketsMap.remove(username);
+                                publicKeysMap.remove(username);
                                 System.out.println("updated senderSocketsMap is: " + senderSocketsMap);
                                 System.out.println("updated senderSocketsMap is: " + recieverSocketsMap);
                                 break;
@@ -85,11 +86,14 @@ class ClientThread implements Runnable
                             {
                                 inFromClient.readLine(); //ignoring extra \n
                                 continue;
-                            }                            
-                            outToClient.writeBytes("PUBLICKEY SENT " + publicKeysMap.get(targetUser) + "\n\n");
+                            }
+                            if((newMessage.split(" ")[0]).equals("FETCHKEY"))   //this is encrypted mode of conversation
+                            {                            
+                                outToClient.writeBytes("PUBLICKEY SENT " + publicKeysMap.get(targetUser) + "\n\n");
 
-                            inFromClient.readLine();
-                            inFromClient.readLine();//SEND targetuser
+                                inFromClient.readLine();
+                                inFromClient.readLine();//SEND targetuser
+                            }
                             newMessage = inFromClient.readLine();
                             inFromClient.readLine();                    //Ignoring the extra \n
                             
