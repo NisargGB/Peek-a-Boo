@@ -41,6 +41,7 @@ class ClientThread implements Runnable
         {
             boolean registeredClient = false;
             boolean disconnected = false;
+            int modeInference = 1;
             
             while(!registeredClient)
             {
@@ -93,7 +94,6 @@ class ClientThread implements Runnable
                                 break;
                             }
 
-
                             String targetUser = newMessage.split(" ")[1].split("\n")[0];//FETCHKEY + targetuser
 
                             if((newMessage.split(" ")[0]).equals("CLOSECONNECTION"))
@@ -102,12 +102,38 @@ class ClientThread implements Runnable
                                 disconnected = true;
                                 continue;
                             }
-                            if((newMessage.split(" ")[0]).equals("FETCHKEY"))   //this is encrypted mode of conversation
+                            if(newMessage.split(" ")[0].equals("FETCHKEYMODE3"))
+                            {
+                                outToClient.writeBytes("PUBLICKEYMODE3 SENT " + publicKeysMap.get(targetUser) + "\n\n");
+                                inFromClient.readLine();    //ignoring extra \n
+                                continue;
+                            }
+                            if((newMessage.split(" ")[0]).equals("FETCHKEY"))   //this is encrypted mode of conversation for mode == 2
                             {                            
+                                
+                                inFromClient.readLine();    
+                                if(publicKeysMap.get(targetUser) == null)
+                                {
+                                    outToClient.writeBytes("ERROR 102 Unable to Send" + "\n\n");
+                                    System.out.println(targetUser + " not registered.");
+                                    continue;
+                                }
                                 outToClient.writeBytes("PUBLICKEY SENT " + publicKeysMap.get(targetUser) + "\n\n");
-
-                                inFromClient.readLine();
                                 inFromClient.readLine();//SEND targetuser
+                                modeInference = 2;
+                            }
+                            if((newMessage.split(" ")[0]).equals("FETCHKEY3"))   //this is encrypted mode of conversation for mode == 3
+                            {                            
+                                inFromClient.readLine();
+                                if(publicKeysMap.get(targetUser) == null)
+                                {
+                                    outToClient.writeBytes("ERROR 102 Unable to Send" + "\n\n");
+                                    System.out.println(targetUser + " not registered.");
+                                    continue;
+                                }
+                                outToClient.writeBytes("PUBLICKEY SENT " + publicKeysMap.get(targetUser) + "\n\n");
+                                inFromClient.readLine();//SEND targetuser
+                                modeInference = 3;
                             }
                             newMessage = inFromClient.readLine();
                             inFromClient.readLine();                    //Ignoring the extra \n
@@ -117,13 +143,23 @@ class ClientThread implements Runnable
                             // int flag = inFromClient.read(content, 0, contentLength);
                             // String contentString = new String(content);
                             String contentString = inFromClient.readLine();
-                            System.out.println(contentString);
-                            String packetToBeSent =  "FORWARD " + username + "\n" + newMessage + "\n\n" + contentString + "\n";
-                            
+                            String packetToBeSent;
+                            if(modeInference == 3)
+                            {
+                                String hashString = inFromClient.readLine(); //only for mode == 3
+                                System.out.println(contentString);
+                                packetToBeSent =  "FORWARD " + username + "\n" + newMessage + "\n\n" + contentString + "\n" + hashString + "\n";
+                            }
+                            else 
+                            {
+                                System.out.println(contentString);
+                                packetToBeSent =  "FORWARD " + username + "\n" + newMessage + "\n\n" + contentString + "\n";
+                            }
                             Socket targetSocket = recieverSocketsMap.get(targetUser);
                             if(targetSocket==null)
                             {
-                                outToClient.writeBytes("ERROR 102 Unable to send\n");
+                                outToClient.writeBytes("ERROR 102 Unable to send\n\n");
+                                System.out.println(targetUser + "not registered.");
                                 continue;
                             }
 

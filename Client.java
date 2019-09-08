@@ -23,9 +23,10 @@ class SendingThread implements Runnable
     BufferedReader inFromUser;
     Boolean isConnected;
     String username;
+    byte[] privateKey;
     int modeOfOperation;
 
-    public SendingThread(Socket sendingSocketIn, DataOutputStream outToServerIn, BufferedReader outToServerAcksIn, Boolean isConnectedIn, String usernameIn, int modeOfOperationIn)
+    public SendingThread(Socket sendingSocketIn, DataOutputStream outToServerIn, BufferedReader outToServerAcksIn, Boolean isConnectedIn, String usernameIn, byte[] privateKeyIn, int modeOfOperationIn)
     {
         sendingSocket = sendingSocketIn;
         outToServer = outToServerIn;
@@ -34,6 +35,7 @@ class SendingThread implements Runnable
         inFromUser = new BufferedReader(new InputStreamReader(System.in));       //Reader that reads the messages types by the user.
         isConnected = isConnectedIn;
         username = usernameIn;
+        privateKey = privateKeyIn;
         modeOfOperation = modeOfOperationIn;
     }
 
@@ -51,7 +53,7 @@ class SendingThread implements Runnable
                 }
                 catch(Exception e)
                 {
-                    System.out.println(message);
+                    // System.out.println(message);
                     System.out.println("Client disconnected! We will miss you...");
                     isConnected = false;
                     break;
@@ -87,11 +89,49 @@ class SendingThread implements Runnable
                     String ack = outToServerAcks.readLine();
                     outToServerAcks.readLine();
                     String[] ackSplit = ack.split(" ");
+                    boolean err = false;
                     while(!(ackSplit[0].equals("PUBLICKEY") && ackSplit[1].equals("SENT")))
                     {
+                        if(ackSplit[0].equals("ERROR"))
+                        {
+                            err = true;
+                            System.out.println(targetUser + " not registered at server.");
+                            break;
+                        }
                         outToServer.writeBytes("FETCHKEY " + targetUser + "\n\n");
                         ack = outToServerAcks.readLine();
                         ackSplit = ack.split(" "); //check this forever loop
+                    }
+                    if(err == true)
+                    {
+                        continue;
+                    }
+                    publicKeyTargetUserBase64 = ackSplit[2];
+                    publicKeyTargetUser =  java.util.Base64.getDecoder().decode(publicKeyTargetUserBase64);
+                }
+                else if(modeOfOperation == 3)
+                {    
+                    String publicKeyTargetUserBase64;
+                    outToServer.writeBytes("FETCHKEY3 " + targetUser + "\n\n");
+                    String ack = outToServerAcks.readLine();
+                    outToServerAcks.readLine();
+                    String[] ackSplit = ack.split(" ");
+                    boolean err = false;
+                    while(!(ackSplit[0].equals("PUBLICKEY") && ackSplit[1].equals("SENT")))
+                    {
+                        if(ackSplit[0].equals("ERROR"))
+                        {
+                            err = true;
+                            System.out.println(targetUser + " not registered at server.");
+                            break;
+                        }
+                        outToServer.writeBytes("FETCHKEY3 " + targetUser + "\n\n");
+                        ack = outToServerAcks.readLine();
+                        ackSplit = ack.split(" "); //check this forever loop
+                    }
+                    if(err == true)
+                    {
+                        continue;
                     }
                     publicKeyTargetUserBase64 = ackSplit[2];
                     publicKeyTargetUser =  java.util.Base64.getDecoder().decode(publicKeyTargetUserBase64);
@@ -120,7 +160,7 @@ class SendingThread implements Runnable
                 else if(messageSentAck.contains("ERROR 101"))
                     System.out.println("The user is not registered for sending messages");
                 else //if(messageSentAck.contains("ERROR 102") || messageSentAck.contains("ERROR 103"))
-                    System.out.println("Sending failed. Please enter message again");
+                    System.out.println(targetUsername + " not registered at the server.");
                 
                 outToServerAcks.readLine();         //Ignoring the extra \n after the ack message
                 
@@ -152,13 +192,23 @@ class SendingThread implements Runnable
          String message = new String();
          message = "SEND " + targetUser + "\n";
          message = message + "Content-length: " + content.length() + "\n"; //TODO : bytes length or number of chatacters ?
-         if(modeOfOperation == 2)
+         if(modeOfOperation == 2 || modeOfOperation == 3)
          {
              Encryptor crypto = new Encryptor();
              byte[] contentBytes = content.getBytes();
              byte[] encryptedData = crypto.encrypt(publicKeyTargetUser, contentBytes); //encrypt function
              String encryptedStringBase64 = java.util.Base64.getEncoder().encodeToString(encryptedData);
-             message = message + "\n" + encryptedStringBase64 + "\n";
+             if(modeOfOperation == 2)
+                message = message + "\n" + encryptedStringBase64 + "\n";
+             else
+             {
+                MessageDigest md = MessageDigest.getInstance("SHA-256");
+                byte[] shaBytes = md.digest(encryptedData);
+                //String shaBytesBase64 = java.util.Base64.getEncoder().encodeToString(shaBytes); //H = hash(M_dash)
+                byte[] encrytedShaBytesBase64 = crypto.encryptFromPrivateKey(privateKey, shaBytes); 
+                String encryptedShaStringBase64 = java.util.Base64.getEncoder().encodeToString(encrytedShaBytesBase64);
+                message = message + "\n" + encryptedStringBase64 + "\n" + encryptedShaStringBase64 + "\n";
+             }
          }
          else
          {
@@ -177,8 +227,10 @@ class RecievingThread implements Runnable
     Boolean isConnected;
     byte[] privateKey;
     int modeOfOperation;
+    DataOutputStream outToServer;
+    BufferedReader outToServerAcks;
 
-    public RecievingThread(Socket recievingSocketIn, BufferedReader inFromServerIn, DataOutputStream inFromServerAcksIn, Boolean isConnectedIn, byte[] privateKeyIn, int modeOfOperationIn)
+    public RecievingThread(Socket recievingSocketIn, BufferedReader inFromServerIn, DataOutputStream inFromServerAcksIn, Boolean isConnectedIn, byte[] privateKeyIn, int modeOfOperationIn, DataOutputStream outToServerIn, BufferedReader outToServerAcksIn)
     {
         recievingSocket = recievingSocketIn;
         inFromServer = inFromServerIn;
@@ -186,6 +238,8 @@ class RecievingThread implements Runnable
         isConnected = isConnectedIn;
         privateKey = privateKeyIn;
         modeOfOperation = modeOfOperationIn;
+        outToServer = outToServerIn;
+        outToServerAcks = outToServerAcksIn;
     }
 
     public void run()
@@ -219,7 +273,7 @@ class RecievingThread implements Runnable
                 // int flag = inFromServer.read(content, 0, contentLength);
                 // String contentString = new String(content);
                 String contentString = inFromServer.readLine();
-                if(modeOfOperation == 2)
+                if(modeOfOperation == 2 || modeOfOperation == 3)
                 {
                     byte[] encryptedDataBase64 = java.util.Base64.getDecoder().decode(contentString);
                     Encryptor crypto = new Encryptor();
@@ -236,6 +290,54 @@ class RecievingThread implements Runnable
                     }    
                     String finalContent = new String(decryptedData);
                     System.out.println("\nNew message from " + senderUsername + " : " + finalContent);
+                    if(modeOfOperation == 3)
+                    {
+                         String digestString = inFromServer.readLine();
+                         outToServer.writeBytes("FETCHKEYMODE3 " + senderUsername + "\n\n");
+                         String ack = outToServerAcks.readLine();
+                         outToServerAcks.readLine();
+                         String[] ackSplit = ack.split(" ");
+                         while(!(ackSplit[0].equals("PUBLICKEYMODE3") && ackSplit[1].equals("SENT")))
+                         {
+                             outToServer.writeBytes("FETCHKEYMODE3 " + senderUsername + "\n\n");
+                             ack = outToServerAcks.readLine();
+                             ackSplit = ack.split(" "); //check this forever loop
+                         }
+                         String publicKeySenderUserBase64 = ackSplit[2];
+                         byte[] publicKeySenderUser =  java.util.Base64.getDecoder().decode(publicKeySenderUserBase64);
+
+                         byte[] encryptedHashBase64 = java.util.Base64.getDecoder().decode(digestString);
+                         byte[] decryptedHash;
+                         try
+                         {
+                             decryptedHash = crypto.decryptByPublicKey(publicKeySenderUser, encryptedHashBase64);
+                         }
+                         catch(Exception e)
+                         {
+                             // e.printStackTrace();
+                             System.out.println("Digest message from " + senderUsername + " couldn't be decrypted.");
+                             continue;
+                         }    
+                         String shaBytes2Base64 = java.util.Base64.getEncoder().encodeToString(decryptedHash);
+
+                         MessageDigest md;
+                         try
+                         {
+                            md = MessageDigest.getInstance("SHA-256");
+                         }
+                         catch(Exception e)
+                         {
+                            // e.printStackTrace();
+                            System.out.println("Sorry! Couldn't get Instance of SHA-256");
+                            continue;
+                         }
+                         byte[] shaBytes1 = md.digest(encryptedDataBase64);
+                         String shaBytes1Base64 = java.util.Base64.getEncoder().encodeToString(shaBytes1); //H = hash(M_dash)
+                         System.out.println("hash(M_dash): " + shaBytes1Base64);
+                         System.out.println("K_pub(H_dash): " + shaBytes2Base64);
+                         System.out.println("Integrity maintained: " + shaBytes1Base64.equals(shaBytes2Base64));
+                         
+                    }
                 }
                 else
                 {
@@ -334,8 +436,8 @@ public class Client
         //Registration complete
 
 
-        Thread sender = new Thread(new SendingThread(sendingSocket, outToServer, outToServerAcks, isConnected, username, modeOfOperation));
-        Thread reciever = new Thread(new RecievingThread(recievingSocket, inFromServer, inFromServerAcks, isConnected, privateKey, modeOfOperation));
+        Thread sender = new Thread(new SendingThread(sendingSocket, outToServer, outToServerAcks, isConnected, username, privateKey, modeOfOperation));
+        Thread reciever = new Thread(new RecievingThread(recievingSocket, inFromServer, inFromServerAcks, isConnected, privateKey, modeOfOperation, outToServer, outToServerAcks));
         sender.start();
         reciever.start();
     }
