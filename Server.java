@@ -72,7 +72,7 @@ class ClientThread implements Runnable
                                 recieverSocketsMap.remove(username);
                                 publicKeysMap.remove(username);
                                 System.out.println("updated senderSocketsMap is: " + senderSocketsMap);
-                                System.out.println("updated senderSocketsMap is: " + recieverSocketsMap);
+                                System.out.println("updated recieverSocketsMap is: " + recieverSocketsMap);
                                 break;
                             }
 
@@ -90,7 +90,7 @@ class ClientThread implements Runnable
                                 recieverSocketsMap.remove(username);
                                 publicKeysMap.remove(username);
                                 System.out.println("updated senderSocketsMap is: " + senderSocketsMap);
-                                System.out.println("updated senderSocketsMap is: " + recieverSocketsMap);
+                                System.out.println("updated recieverSocketsMap is: " + recieverSocketsMap);
                                 break;
                             }
 
