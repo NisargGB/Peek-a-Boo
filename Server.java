@@ -111,7 +111,7 @@ class ClientThread implements Runnable
                             if((newMessage.split(" ")[0]).equals("FETCHKEY"))   //this is encrypted mode of conversation for mode == 2
                             {                            
                                 
-                                inFromClient.readLine();    
+                                inFromClient.readLine();                //Ignoring the extra \n
                                 if(publicKeysMap.get(targetUser) == null)
                                 {
                                     outToClient.writeBytes("ERROR 102 Unable to Send" + "\n\n");
@@ -119,7 +119,7 @@ class ClientThread implements Runnable
                                     continue;
                                 }
                                 outToClient.writeBytes("PUBLICKEY SENT " + publicKeysMap.get(targetUser) + "\n\n");
-                                inFromClient.readLine();//SEND targetuser
+                                newMessage = inFromClient.readLine();//SEND targetuser
                                 modeInference = 2;
                             }
                             if((newMessage.split(" ")[0]).equals("FETCHKEY3"))   //this is encrypted mode of conversation for mode == 3
@@ -132,10 +132,16 @@ class ClientThread implements Runnable
                                     continue;
                                 }
                                 outToClient.writeBytes("PUBLICKEY SENT " + publicKeysMap.get(targetUser) + "\n\n");
-                                inFromClient.readLine();//SEND targetuser
+                                newMessage = inFromClient.readLine();//SEND targetuser
                                 modeInference = 3;
                             }
+                            if(newMessage.split(" ")[0].equals("ERROR420") && newMessage.split(" ")[1].equals("COULDNOT") && newMessage.split(" ")[2].equals("BE") && newMessage.split(" ")[3].equals("ENCRYPTED"))
+                            {
+                                inFromClient.readLine();        //Ignoring the extra \n
+                                continue;
+                            }
                             newMessage = inFromClient.readLine();
+                            
                             inFromClient.readLine();                    //Ignoring the extra \n
                             
                             int contentLength = Integer.parseInt(newMessage.split(" ")[1]);

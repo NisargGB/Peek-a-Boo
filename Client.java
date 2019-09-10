@@ -55,6 +55,7 @@ class SendingThread implements Runnable
                 {
                     // System.out.println(message);
                     System.out.println("Client disconnected! We will miss you...");
+                    outToServer.writeBytes("CLOSECONNECTION " + username + "\n\n");
                     isConnected = false;
                     break;
                 }
@@ -145,6 +146,7 @@ class SendingThread implements Runnable
                 {
                     // e.printStackTrace();
                     System.out.println("Message couldn't be encrypted");
+                    outToServer.writeBytes("ERROR420 COULDNOT BE ENCRYPTED" + "\n\n");
                     continue;
                 }
                 String targetUsername = message.split(" ")[0].substring(1);
