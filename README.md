@@ -14,5 +14,5 @@ java [Project Home Directory]/bin/Client [username] [Server IP] [mode]
 NOTE:
 	-- Username should be an alphanumeric string.
 	-- mode = 1 for unencrypted chat mode.
-	-- mode = 2 for encrypted chat mode.
-	-- mode = 3 for encrypted chat mode with added check for message integrity.
+	-- mode = 2 for encrypted chat mode. (RSA Algorithm)
+	-- mode = 3 for encrypted chat mode with added check for message integrity through message sgnatures. (SHA-256)
