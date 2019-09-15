@@ -86,13 +86,13 @@ class ClientThread implements Runnable
                             catch(SocketException se)
                             {
                                 System.out.println("\nThe client " + username + " was disconnected");
-                                System.out.println("earlier senderSocketsMap was: " + senderSocketsMap);
-                                System.out.println("earlier recieverSocketsMap was: " + recieverSocketsMap);
+                                System.out.println("\nOLD senderSocketsMap was: " + senderSocketsMap);
+                                System.out.println("\nOLD recieverSocketsMap was: " + recieverSocketsMap);
                                 senderSocketsMap.remove(username);
                                 recieverSocketsMap.remove(username);
                                 publicKeysMap.remove(username);
-                                System.out.println("updated senderSocketsMap is: " + senderSocketsMap);
-                                System.out.println("updated recieverSocketsMap is: " + recieverSocketsMap);
+                                System.out.println("\nNEW senderSocketsMap is: " + senderSocketsMap);
+                                System.out.println("\nNEW recieverSocketsMap is: " + recieverSocketsMap + "\n");
                                 break;
                             }
 
@@ -104,13 +104,13 @@ class ClientThread implements Runnable
                             catch(Exception e)
                             {
                                 System.out.println("\nThe client " + username + " was disconnected");
-                                System.out.println("earlier senderSocketsMap was: " + senderSocketsMap);
-                                System.out.println("earlier recieverSocketsMap was: " + recieverSocketsMap);
+                                System.out.println("\nOLD senderSocketsMap was: " + senderSocketsMap);
+                                System.out.println("\nOLD recieverSocketsMap was: " + recieverSocketsMap);
                                 senderSocketsMap.remove(username);
                                 recieverSocketsMap.remove(username);
                                 publicKeysMap.remove(username);
-                                System.out.println("updated senderSocketsMap is: " + senderSocketsMap);
-                                System.out.println("updated recieverSocketsMap is: " + recieverSocketsMap);
+                                System.out.println("\nNEW senderSocketsMap is: " + senderSocketsMap);
+                                System.out.println("\nNEW recieverSocketsMap is: " + recieverSocketsMap + "\n");
                                 break;
                             }
 

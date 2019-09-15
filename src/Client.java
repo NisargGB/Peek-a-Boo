@@ -72,7 +72,7 @@ class SendingThread implements Runnable
                 {
                     // System.out.println(message);
                     System.out.println("Client disconnected! We will miss you...");
-                    outToServer.writeBytes("CLOSECONNECTION " + username + "\n\n");
+                    // outToServer.writeBytes("CLOSECONNECTION " + username + "\n\n");
                     isConnected.boolVal = false;
                     break;
                 }
@@ -87,7 +87,7 @@ class SendingThread implements Runnable
                 {
                     System.out.println("Client disconnected! We will miss you...");
                     isConnected.boolVal = false;
-                    outToServer.writeBytes("CLOSECONNECTION " + username + "\n\n");
+                    // outToServer.writeBytes("CLOSECONNECTION " + username + "\n\n");
                     break;
                 }
                 
