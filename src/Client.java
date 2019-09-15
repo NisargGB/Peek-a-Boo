@@ -332,11 +332,11 @@ class RecievingThread implements Runnable
                     catch(Exception e)
                     {
                         // e.printStackTrace();
-                        System.out.println("New message from " + senderUsername + " couldn't be decrypted.");
+                        System.out.println("New message from [" + senderUsername + "] couldn't be decrypted.");
                         continue;
                     }    
                     String finalContent = new String(decryptedData);
-                    System.out.println("\nNew message from " + senderUsername + " : " + finalContent);
+                    System.out.print("\nNew message from [" + senderUsername + "] : " + finalContent + "\n\nEnter message: ");
                     if(modeOfOperation == 3)
                     {
                          String digestString = inFromServer.readLine();
@@ -362,7 +362,7 @@ class RecievingThread implements Runnable
                          catch(Exception e)
                          {
                              // e.printStackTrace();
-                             System.out.println("Digest message from " + senderUsername + " couldn't be decrypted.");
+                             System.out.println("Digest message from [" + senderUsername + "] couldn't be decrypted.");
                              continue;
                          }    
                          String shaBytes2Base64 = java.util.Base64.getEncoder().encodeToString(decryptedHash);
@@ -388,7 +388,7 @@ class RecievingThread implements Runnable
                 }
                 else
                 {
-                    System.out.println("\nNew message from " + senderUsername + " : " + contentString);
+                    System.out.print("\nNew message from [" + senderUsername + "] : " + contentString + "\n\nEnter message: ");
                 }
                 inFromServerAcks.writeBytes("RECIEVED " + senderUsername + "\n\n");       
             }

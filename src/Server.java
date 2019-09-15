@@ -65,7 +65,7 @@ class ClientThread implements Runnable
                         {
                             if(disconnected == true)
                             {
-                                System.out.println("The client " + username + " was disconnected");
+                                System.out.println("\nThe client " + username + " was disconnected");
                                 System.out.println("\nOLD senderSocketsMap was: " + senderSocketsMap);
                                 System.out.println("\nOLD recieverSocketsMap was: " + recieverSocketsMap);
                                 DataOutputStream ds = new DataOutputStream(recieverSocketsMap.get(username).getOutputStream());
@@ -85,7 +85,7 @@ class ClientThread implements Runnable
                             }
                             catch(SocketException se)
                             {
-                                System.out.println("The client " + username + " was disconnected");
+                                System.out.println("\nThe client " + username + " was disconnected");
                                 System.out.println("earlier senderSocketsMap was: " + senderSocketsMap);
                                 System.out.println("earlier recieverSocketsMap was: " + recieverSocketsMap);
                                 senderSocketsMap.remove(username);
