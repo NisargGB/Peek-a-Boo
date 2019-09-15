@@ -66,15 +66,15 @@ class ClientThread implements Runnable
                             if(disconnected == true)
                             {
                                 System.out.println("The client " + username + " was disconnected");
-                                System.out.println("earlier senderSocketsMap was: " + senderSocketsMap);
-                                System.out.println("earlier recieverSocketsMap was: " + recieverSocketsMap);
+                                System.out.println("\nOLD senderSocketsMap was: " + senderSocketsMap);
+                                System.out.println("\nOLD recieverSocketsMap was: " + recieverSocketsMap);
                                 DataOutputStream ds = new DataOutputStream(recieverSocketsMap.get(username).getOutputStream());
                                 ds.writeBytes("STOPRECIEVING\n\n");
                                 senderSocketsMap.remove(username);
                                 recieverSocketsMap.remove(username);
                                 publicKeysMap.remove(username);
-                                System.out.println("updated senderSocketsMap is: " + senderSocketsMap);
-                                System.out.println("updated recieverSocketsMap is: " + recieverSocketsMap + "\n");
+                                System.out.println("\nNEW senderSocketsMap is: " + senderSocketsMap);
+                                System.out.println("\nNEW recieverSocketsMap is: " + recieverSocketsMap + "\n");
                                 break;
                             }
 
@@ -237,7 +237,7 @@ public class Server
 
     public static void main(String args[]) throws Exception
     {
-        //Command line inputs:
+        System.out.println("\n----------------------Server started----------------------\n");
 
         ServerSocket serverSocket = new ServerSocket(1234);
         ArrayList<Thread> threads = new ArrayList<Thread>();

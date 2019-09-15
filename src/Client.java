@@ -53,13 +53,20 @@ class SendingThread implements Runnable
     {
         while(isConnected.boolVal)
         {
-            System.out.print("Enter message: ");
+            System.out.print("\nEnter message: ");
             try
             {
                 String message = "";
                 try
                 {
                     message = inFromUser.readLine();
+                    
+                    // We got a message but server was disconnected
+                    if(!isConnected.boolVal)
+                    {
+                        System.out.println("Couldn't reach server. Please try again.\n");
+                        continue;
+                    }
                 }
                 catch(Exception e)
                 {
@@ -69,10 +76,8 @@ class SendingThread implements Runnable
                     isConnected.boolVal = false;
                     break;
                 }
-
-                if(!checkMessageFormat(message))
-                    continue;
-
+                
+            
                 String[] messageSplit = {};
                 try
                 {
@@ -86,6 +91,10 @@ class SendingThread implements Runnable
                     break;
                 }
                 
+                if(!checkMessageFormat(message))
+                    continue;
+
+
                 byte[] publicKeyTargetUser = {};
                 String targetUser = messageSplit[0].substring(1);
                 if(targetUser.equals("Server") && messageSplit[1].equals("Bye"))
@@ -270,7 +279,17 @@ class RecievingThread implements Runnable
             while(isConnected.boolVal)
             {
                 //Reading the FORWARD line
-                String message = inFromServer.readLine();
+                String message = "";
+                try
+                {
+                    message = inFromServer.readLine();
+                }
+                catch(Exception e)
+                {
+                    System.out.println("\nConnection to server lost\n");
+                    isConnected.boolVal = false;
+                    continue;
+                }
                 
                 if(message.equals("STOPRECIEVING"))
                 {
@@ -363,7 +382,7 @@ class RecievingThread implements Runnable
                          String shaBytes1Base64 = java.util.Base64.getEncoder().encodeToString(shaBytes1); //H = hash(M_dash)
                          System.out.println("hash(M_dash): " + shaBytes1Base64);
                          System.out.println("K_pub(H_dash): " + shaBytes2Base64);
-                         System.out.println("Integrity maintained: " + shaBytes1Base64.equals(shaBytes2Base64));
+                         System.out.print("Integrity maintained: " + shaBytes1Base64.equals(shaBytes2Base64) + "\n\nEnter message: ");
                          
                     }
                 }
@@ -376,7 +395,7 @@ class RecievingThread implements Runnable
         }
         catch(IOException e)
         {
-            System.out.println(e);
+            e.printStackTrace();
         }
     }
 }
@@ -393,9 +412,19 @@ public class Client
         String username = args[0];
         String serverHost = args[1];
         int modeOfOperation = Integer.parseInt(args[2]);
+        Socket sendingSocket = null;
+        Socket recievingSocket = null;
 
-        Socket sendingSocket = new Socket(serverHost, 1234);             //TODO
-        Socket recievingSocket = new Socket(serverHost, 1234);            //TODO
+        try
+        {
+            sendingSocket = new Socket(serverHost, 1234);
+            recievingSocket = new Socket(serverHost, 1234);
+        }
+        catch(Exception e)
+        {
+            System.out.println("\nCouldn't connect to a Peek-a-Boo server. Please try again\n");
+            return;
+        }
 
         Encryptor crypto = new Encryptor();
         KeyPair generateKeyPair = crypto.generateKeyPair();
