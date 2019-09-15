@@ -96,7 +96,23 @@ class ClientThread implements Runnable
                                 break;
                             }
 
-                            String targetUser = newMessage.split(" ")[1].split("\n")[0];//FETCHKEY + targetuser
+                            String targetUser = "";
+                            try
+                            {
+                                targetUser = newMessage.split(" ")[1].split("\n")[0];//FETCHKEY + targetuser
+                            }
+                            catch(Exception e)
+                            {
+                                System.out.println("\nThe client " + username + " was disconnected");
+                                System.out.println("earlier senderSocketsMap was: " + senderSocketsMap);
+                                System.out.println("earlier recieverSocketsMap was: " + recieverSocketsMap);
+                                senderSocketsMap.remove(username);
+                                recieverSocketsMap.remove(username);
+                                publicKeysMap.remove(username);
+                                System.out.println("updated senderSocketsMap is: " + senderSocketsMap);
+                                System.out.println("updated recieverSocketsMap is: " + recieverSocketsMap);
+                                break;
+                            }
 
                             if((newMessage.split(" ")[0]).equals("CLOSECONNECTION"))
                             {

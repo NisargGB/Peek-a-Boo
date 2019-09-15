@@ -291,6 +291,13 @@ class RecievingThread implements Runnable
                     continue;
                 }
                 
+                if(message == null)
+                {
+                    System.out.println("\nConnection to server lost\n");
+                    isConnected.boolVal = false;
+                    continue;
+                }
+
                 if(message.equals("STOPRECIEVING"))
                 {
                     inFromServer.readLine();    //Ignore the extra \n
@@ -408,6 +415,13 @@ public class Client
     public static void main(String args[]) throws Exception
     {
         //Command line inputs: <username> <server IP address>
+
+        if(args.length != 3 || !args[2].matches("[1-3]"))
+        {
+            System.out.println("Invalid number of arguments or mode. Please try again.");
+            System.out.println("Correct usage: 'java Client [username] [Server IP] [mode]'");
+            return;
+        }
 
         String username = args[0];
         String serverHost = args[1];
