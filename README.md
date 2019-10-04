@@ -1,17 +1,18 @@
-# ChatApplication
-# Developed by --- Nisarg Bhatt (2017CS10354) --- Divyanshu Mandowara (2017CS10333)
+# Peek-a-Boo - A PC command line based end-to-end encrypted chat application
+Developed by --- Nisarg Bhatt --- Divyanshu Mandowara
 Computer Networks Assignment-2: An end-to-end encrypted Java chat application.
 
-# Compile the project
-javac -d [Project Home Directory]/bin [Project Home Directory]/src/*.java
+# Usage
+Compile the project
+'javac -d [Project Home Directory]/bin [Project Home Directory]/src/*.java'
 
-# Setup Server
-cd [Project Home Directory]/bin
-java Server
+Setup Server
+'cd [Project Home Directory]/bin'
+'java Server'
 
-# Start a Client
-cd [Project Home Directory]/bin
-java Client [username] [Server IP] [mode]
+Start a Client
+'cd [Project Home Directory]/bin'
+'java Client [username] [Server IP] [mode]'
 
 NOTE:
 	-- Username should be an alphanumeric string.
