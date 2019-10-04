@@ -10,6 +10,7 @@ Setup Server
 'cd [Project Home Directory]/bin'
 'java Server'
 
+In a new window (or another machine) -
 Start a Client
 'cd [Project Home Directory]/bin'
 'java Client [username] [Server IP] [mode]'
