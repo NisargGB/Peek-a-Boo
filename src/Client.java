@@ -466,7 +466,7 @@ public class Client
         }
         else if(ack.contains("ERROR 100 Malformed username"))
         {
-            System.out.println("The username: " + username + " is invalid. Please try again");
+            System.out.println("The username: " + username + " is invalid or taken. Please register again. (Only alphanumerals. Avoid spaces and spl chars)");
             sendingSocket.close();
             recievingSocket.close();
             return;
@@ -489,7 +489,7 @@ public class Client
         }
         else if(ack.contains("ERROR 100 Malformed username"))
         {
-            System.out.println("The username: " + username + " is invalid. Please register again. (Only alphanumerals. Avoid spaces and spl chars)");
+            System.out.println("The username: " + username + " is invalid or taken. Please register again. (Only alphanumerals. Avoid spaces and spl chars)");
             sendingSocket.close();
             recievingSocket.close();
             return;

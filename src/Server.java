@@ -234,7 +234,7 @@ class ClientThread implements Runnable
 
     public boolean isValidUsername(String username)
     {
-        return username.matches("[a-zA-Z0-9]+");
+        return username.matches("[a-zA-Z0-9]+") && !(recieverSocketsMap.containsKey(username) || senderSocketsMap.containsKey(username));
     }
 
     public void sendUsernameError() throws IOException
